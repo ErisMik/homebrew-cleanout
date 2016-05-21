@@ -14,23 +14,36 @@ def main():
         packages.append(item)
     print(packages)
 
+    # Read the keep file if it exists
+    print("Reading file for packages marked to keep")
+    keeping = []
+    try:
+        with open("formulas.keep", 'r') as keep_file:
+            for line in keep_file:
+                keeping.append(line.strip())
+    except:
+        print("Keep file does not exist")
+
     # Determine which packages are deletable candidates
     possibles = []
     for formula in packages:
-        print("Finding uses and dependencies for "+formula)
-        proc2 = subprocess.Popen(["brew", "uses", formula], stdout=subprocess.PIPE)
-        tmp2 = proc2.stdout.read()
+        if formula in keeping:
+            print(formula+" is marked to keep")
+        else:
+            print("Finding uses and dependencies for "+formula)
+            proc2 = subprocess.Popen(["brew", "uses", formula], stdout=subprocess.PIPE)
+            tmp2 = proc2.stdout.read()
 
-        tmp2 = tmp2.split("\n")
+            tmp2 = tmp2.split("\n")
 
-        inter = []
-        for dep in tmp2:
-            if dep in packages:
-                inter.append(dep)
+            inter = []
+            for dep in tmp2:
+                if dep in packages:
+                    inter.append(dep)
 
-        if len(inter) == 0 and not tmp2[0] == '':
-            possibles.append(formula)
-            print("Adding "+formula+" as deletion candidate")
+            if len(inter) == 0 and not tmp2[0] == '':
+                possibles.append(formula)
+                print("Adding "+formula+" as deletion candidate")
 
     # Ensure there are actually packages to delete
     if len(possibles) == 0:
@@ -53,14 +66,24 @@ def main():
     # Ask for deletion of each of the packages
     print("")
     to_delete = []
+    to_keep = []
     for formula in deps:
         print(formula + ": " + deps[formula])
-        value = raw_input("Delete %s? [Y/n]" % formula)
-        if "n" not in value:
+        value = raw_input("Delete %s? [Y/n/k]" % formula)
+        if "k" in value:
+            to_keep.append(formula) 
+        elif "n" not in value:
             to_delete.append(formula)
         print("")
 
-    # Delete packages
+    # Write keep-ed packages to file
+    if len(to_keep) > 0:
+        with open("formulas.keep", 'a') as keep_file:
+            for keep in to_keep:
+                print("Marking "+keep+" to keep")
+                keep_file.write(keep+"\n")
+
+    # Delete marked packages
     for package in to_delete:
         print("DELETING: " + package)
         system("brew uninstall %s" % package)

@@ -14,7 +14,7 @@ def main():
         packages.append(item)
     print(packages)
 
-    # Read the keep file if it exists
+    # Read the keep file if it exists, and add those to a list of formulas to keep
     print("Reading file for packages marked to keep")
     keeping = []
     try:
@@ -27,20 +27,22 @@ def main():
     # Determine which packages are deletable candidates
     possibles = []
     for formula in packages:
-        if formula in keeping:
+        if formula in keeping:  # If the file is marked to keep, ignore it and tell user
             print(formula+" is marked to keep")
         else:
             print("Finding uses and dependencies for "+formula)
             proc2 = subprocess.Popen(["brew", "uses", formula], stdout=subprocess.PIPE)
             tmp2 = proc2.stdout.read()
 
-            tmp2 = tmp2.split("\n")
+            tmp2 = tmp2.split("\n")  # tmp2 is now a list of formulas that use this one
 
+            # This bit determines if one of the installed packages on the systm uses this formula
             inter = []
             for dep in tmp2:
                 if dep in packages:
                     inter.append(dep)
 
+            # If the formula is a dependency, and is not being used currently...
             if len(inter) == 0 and not tmp2[0] == '':
                 possibles.append(formula)
                 print("Adding "+formula+" as deletion candidate")
@@ -58,8 +60,8 @@ def main():
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     tmp = proc.stdout.read()
     tmp = tmp.split("\n")
-    del tmp[-1]
-    for line in tmp:
+    del tmp[-1]  # List contains trailing empty element, delete it
+    for line in tmp:  # Form dictionary based on descriptions
         tups = line.split(":")
         deps[tups[0]] = tups[1].strip()
 
